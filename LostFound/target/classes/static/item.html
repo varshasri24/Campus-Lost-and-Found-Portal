@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Item</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header><a href="/">Home</a></header>
+  <main>
+    <div id="item"></div>
+    <hr>
+    <h3>Messages</h3>
+    <div id="messages"></div>
+
+    <h4>Contact/post a message</h4>
+    <form id="msgForm">
+      <input type="hidden" name="itemId" id="itemId">
+      <label>Your name: <input name="fromName" required></label><br>
+      <label>Your contact: <input name="fromContact" required></label><br>
+      <label>Message:<br><textarea name="content" required></textarea></label><br>
+      <button type="submit">Send Message</button>
+    </form>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    document.getElementById('itemId').value = id;
+
+    async function loadItem() {
+      const res = await fetch('/api/items/' + id);
+      const it = await res.json();
+      const box = document.getElementById('item');
+      box.innerHTML = `<h2>${it.title} (${it.type})</h2>
+                       <p>${it.description || ''}</p>
+                       <p><b>Location:</b> ${it.location || '-'}</p>
+                       <p><b>Poster:</b> ${it.posterName || 'Anonymous'} (${it.posterContact || 'N/A'})</p>
+                       ${it.imagePath ? `<img src="/${it.imagePath}" class="bigimg"/>` : ''}`;
+    }
+
+    async function loadMessages() {
+      const res = await fetch('/api/messages/item/' + id);
+      const msgs = await res.json();
+      const container = document.getElementById('messages');
+      container.innerHTML = '';
+      msgs.forEach(m => {
+        const d = document.createElement('div');
+        d.className = 'card';
+        d.innerHTML = `<p><b>${m.fromName}</b> (${m.fromContact}) at ${new Date(m.createdAt).toLocaleString()}</p><p>${m.content}</p>`;
+        container.appendChild(d);
+      });
+    }
+
+    document.getElementById('msgForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = new FormData(form);
+      const res = await fetch('/api/messages', { method: 'POST', body: data });
+      if (res.ok) {
+        alert('Message sent');
+        form.reset();
+        loadMessages();
+      } else {
+        const json = await res.json();
+        alert('Error: ' + JSON.stringify(json));
+      }
+    });
+
+    loadItem();
+    loadMessages();
+  </script>
+</body>
+</html>
